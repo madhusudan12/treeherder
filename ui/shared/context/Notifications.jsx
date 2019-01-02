@@ -1,5 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import findLastIndex from 'lodash/findLastIndex';
 
 export const NotificationsContext = React.createContext({});
 
@@ -51,7 +52,12 @@ export class Notifications extends React.Component {
     const { notifications, storedNotifications } = this.state;
     const maxNsNotifications = 5;
     const notification = { ...opts, message, severity, created: Date.now() };
-    const newNotifications = [notification, ...notifications];
+    const trimmedNotifications =
+      notifications >= maxNsNotifications
+        ? this.withoutLastTransient(notifications)
+        : notifications;
+
+    const newNotifications = [notification, ...trimmedNotifications];
 
     storedNotifications.unshift(notification);
     storedNotifications.splice(40);
@@ -64,10 +70,6 @@ export class Notifications extends React.Component {
       },
       () => {
         if (!opts.sticky) {
-          if (notifications.length > maxNsNotifications) {
-            this.shift();
-            return;
-          }
           setTimeout(this.shift, 4000, true);
         }
       },
@@ -94,6 +96,15 @@ export class Notifications extends React.Component {
     const { notifications } = this.state;
 
     this.removeNotification(notifications.findIndex(n => !n.sticky), delay);
+  };
+
+  withoutLastTransient = notifications => {
+    const last = findLastIndex(notifications, n => !n.sticky);
+
+    if (last) {
+      notifications.splice(last, 1);
+    }
+    return notifications;
   };
 
   /*
